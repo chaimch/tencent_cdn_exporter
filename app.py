@@ -1,33 +1,28 @@
+#!/usr/bin/env python
 # -*- coding:utf-8 -*-
-import prometheus_client
-from prometheus_client import Gauge, Counter
-from prometheus_client.core import CollectorRegistry, REGISTRY
-from flask import Response, Flask
+from random import randint
+from flask import Flask, Response
+from prometheus_client import Counter, Gauge, Histogram, Summary, generate_latest, CollectorRegistry
 
 app = Flask(__name__)
-# 实例化 REGISTRY
-REGISTRY = CollectorRegistry(auto_describe=False)
-# 这里又加了个 sertype 的 labels，定义的 labels 一定要被用到，否则会报错
-port_up = Gauge("Server_port", "monitor server port status.", ["sertype", "host", "port"], registry=REGISTRY)
+
+registry = CollectorRegistry()
+
+counter = Counter('my_counter', 'an example showed how to use counter', ['machine_ip'], registry=registry)
+gauge = Gauge('my_gauge', 'an example showed how to use gauge', ['machine_ip'], registry=registry)
+buckets = (100, 200, 300, 500, 1000, 3000, 10000, float('inf'))
+histogram = Histogram('my_histogram', 'an example showed how to use histogram', ['machine_ip'], registry=registry, buckets=buckets)
+summary = Summary('my_summary', 'an example showed how to use summary', ['machine_ip'], registry=registry)
 
 
-@app.route("/metrics")
-def requests_count():
-    # 模拟多个值传入
-    a = [{"sertype": "zookeeper", "host": "192.168.1.22", "port": "2181", "status": 0},
-         {"sertype": "zookeeper", "host": "192.168.1.33", "port": "2181", "status": 0},
-         {"sertype": "zookeeper", "host": "192.168.1.44", "port": "2181", "status": 1},
-         {"sertype": "mysql", "host": "192.168.1.88", "port": "3306", "status": 0},
-         {"sertype": "mysql", "host": "192.168.1.99", "port": "3306", "status": 1}]
-    for i in a:
-        ip = "".join(i.get("host"))
-        port = "".join(i.get("port"))
-        status = i.get("status")
-        sertype = "".join(i.get("sertype"))
-        port_up.labels(sertype, ip, port).set(status)
-    return Response(prometheus_client.generate_latest(port_up),
-                    mimetype="text/plain")
+@app.route('/metrics')
+def hello():
+    counter.labels('127.0.0.1').inc(1)
+    gauge.labels('127.0.0.1').set(2)
+    histogram.labels('127.0.0.1').observe(1001)
+    summary.labels('127.0.0.1').observe(randint(1, 10))
+    return Response(generate_latest(registry), mimetype='text/plain')
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=31672, debug=True)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
