@@ -1,0 +1,16 @@
+{
+  "CDN_CONFIG": {
+    "projectId": 0,
+    "domains": [
+      "xxx.1.com",
+      "xxx.2.com"
+    ],
+    "metrics": [
+      "flux",
+      "bandwidth",
+      "request",
+      "fluxHitRate",
+      "statusCode"
+    ]
+  }
+}
